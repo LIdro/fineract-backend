@@ -2,6 +2,10 @@ FROM gradle:7.5.1-jdk17 AS builder
 
 WORKDIR /app
 
+# Set Gradle options for better build performance and network resilience
+ENV GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=4 -Xmx4096m -Xms1024m"
+ENV GRADLE_USER_HOME="/app/.gradle"
+
 # Copy gradle configuration files
 COPY gradle gradle
 COPY build.gradle settings.gradle gradle.properties ./
@@ -17,8 +21,13 @@ COPY fineract-investor fineract-investor
 COPY integration-tests integration-tests
 COPY config config
 
-# Build the application
-RUN gradle clean bootJar -x test --no-daemon --stacktrace
+# Add retry mechanism for dependency downloads
+RUN --mount=type=cache,target=/app/.gradle \
+    for i in {1..3}; do \
+        gradle clean dependencies --refresh-dependencies && break || sleep 15; \
+    done && \
+    gradle clean bootJar -x test --no-daemon --stacktrace --info || \
+    (sleep 30 && gradle clean bootJar -x test --no-daemon --stacktrace --info)
 
 # Final stage
 FROM openjdk:17-slim
