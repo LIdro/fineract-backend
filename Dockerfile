@@ -2,36 +2,39 @@ FROM gradle:7.5.1-jdk17 AS builder
 
 WORKDIR /app
 
-# Set Gradle options for better build performance
-ENV GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Xmx4096m -Xms1024m"
+# Set basic Gradle options
+ENV GRADLE_OPTS="-Dorg.gradle.daemon=false"
 ENV GRADLE_USER_HOME="/app/.gradle"
 
-# Copy gradle configuration files first
+# Create init.gradle with repository configurations
+RUN echo "allprojects {" > /root/.gradle/init.gradle && \
+    echo "    repositories {" >> /root/.gradle/init.gradle && \
+    echo "        mavenCentral()" >> /root/.gradle/init.gradle && \
+    echo "        gradlePluginPortal()" >> /root/.gradle/init.gradle && \
+    echo "        maven { url 'https://jfrog.fineract.dev/artifactory/libs-snapshot-local' }" >> /root/.gradle/init.gradle && \
+    echo "        maven { url 'https://jfrog.fineract.dev/artifactory/libs-release-local' }" >> /root/.gradle/init.gradle && \
+    echo "    }" >> /root/.gradle/init.gradle && \
+    echo "}" >> /root/.gradle/init.gradle
+
+# Copy only essential files first
 COPY gradle gradle
 COPY build.gradle settings.gradle gradle.properties ./
 COPY buildSrc buildSrc
 
-# Initial dependency resolution
-RUN echo "Downloading initial dependencies..." && \
-    gradle dependencies --no-daemon --info || exit 1
-
-# Copy core modules first
-COPY fineract-core fineract-core
+# Copy all source files
 COPY fineract-provider fineract-provider
-RUN echo "Building core modules..." && \
-    gradle :fineract-core:build :fineract-provider:build -x test --no-daemon --info || exit 1
-
-# Copy remaining modules
 COPY fineract-client fineract-client
 COPY fineract-avro-schemas fineract-avro-schemas
+COPY fineract-core fineract-core
 COPY fineract-loan fineract-loan
 COPY fineract-investor fineract-investor
 COPY integration-tests integration-tests
 COPY config config
 
-# Final build
-RUN echo "Performing final build..." && \
-    gradle clean bootJar -x test --no-daemon --info --stacktrace || exit 1
+# Build with basic settings
+RUN gradle clean bootJar -x test --no-daemon --info \
+    -Dorg.gradle.jvmargs="-Xmx4g -Xms512m" \
+    -Dorg.gradle.parallel=false
 
 # Final stage
 FROM openjdk:17-slim
