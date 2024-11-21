@@ -2,37 +2,36 @@ FROM gradle:7.5.1-jdk17 AS builder
 
 WORKDIR /app
 
-# Set Gradle options for better build performance and network resilience
-ENV GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=4 -Xmx4096m -Xms1024m"
+# Set Gradle options for better build performance
+ENV GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Xmx4096m -Xms1024m"
 ENV GRADLE_USER_HOME="/app/.gradle"
 
-# Copy gradle configuration files
+# Copy gradle configuration files first
 COPY gradle gradle
 COPY build.gradle settings.gradle gradle.properties ./
 COPY buildSrc buildSrc
 
-# Copy project modules
+# Initial dependency resolution
+RUN echo "Downloading initial dependencies..." && \
+    gradle dependencies --no-daemon --info || exit 1
+
+# Copy core modules first
+COPY fineract-core fineract-core
 COPY fineract-provider fineract-provider
+RUN echo "Building core modules..." && \
+    gradle :fineract-core:build :fineract-provider:build -x test --no-daemon --info || exit 1
+
+# Copy remaining modules
 COPY fineract-client fineract-client
 COPY fineract-avro-schemas fineract-avro-schemas
-COPY fineract-core fineract-core
 COPY fineract-loan fineract-loan
 COPY fineract-investor fineract-investor
 COPY integration-tests integration-tests
 COPY config config
 
-# Add retry mechanism for dependency downloads and build
-RUN for i in {1..3}; do \
-        echo "Attempt $i: Downloading dependencies..." && \
-        (gradle clean dependencies --refresh-dependencies --no-daemon || \
-        (echo "Attempt $i failed, waiting 15s..." && sleep 15 && false)) && break; \
-    done && \
-    echo "Building with Gradle..." && \
-    (gradle clean bootJar -x test --no-daemon --stacktrace --info || \
-    (echo "First build attempt failed, waiting 30s..." && \
-     sleep 30 && \
-     echo "Retrying build..." && \
-     gradle clean bootJar -x test --no-daemon --stacktrace --info))
+# Final build
+RUN echo "Performing final build..." && \
+    gradle clean bootJar -x test --no-daemon --info --stacktrace || exit 1
 
 # Final stage
 FROM openjdk:17-slim
