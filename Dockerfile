@@ -16,6 +16,9 @@ RUN echo "allprojects {" > /root/.gradle/init.gradle && \
     echo "    }" >> /root/.gradle/init.gradle && \
     echo "}" >> /root/.gradle/init.gradle
 
+# Create required directories
+RUN mkdir -p custom/docker
+
 # Copy only essential files first
 COPY gradle gradle
 COPY build.gradle settings.gradle gradle.properties ./
@@ -30,11 +33,13 @@ COPY fineract-loan fineract-loan
 COPY fineract-investor fineract-investor
 COPY integration-tests integration-tests
 COPY config config
+COPY custom custom
 
-# Build with basic settings
+# Build with basic settings and system property to skip custom modules
 RUN gradle clean bootJar -x test --no-daemon --info \
     -Dorg.gradle.jvmargs="-Xmx4g -Xms512m" \
-    -Dorg.gradle.parallel=false
+    -Dorg.gradle.parallel=false \
+    -Dfineract.custom.modules.enabled=false
 
 # Final stage
 FROM openjdk:17-slim
