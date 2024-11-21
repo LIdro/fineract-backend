@@ -2,25 +2,20 @@ FROM gradle:7.5.1-jdk17 AS builder
 
 WORKDIR /app
 
-# Copy only the files needed for dependency resolution first
+# Copy gradle configuration files
+COPY gradle gradle
 COPY build.gradle settings.gradle gradle.properties ./
 COPY buildSrc buildSrc
-COPY fineract-provider/build.gradle fineract-provider/
-COPY fineract-provider/dependencies.gradle fineract-provider/
-COPY fineract-provider/gradle.properties fineract-provider/
-COPY fineract-client/build.gradle fineract-client/
-COPY fineract-avro-schemas/build.gradle fineract-avro-schemas/
-COPY fineract-core/build.gradle fineract-core/
-COPY fineract-loan/build.gradle fineract-loan/
-COPY fineract-investor/build.gradle fineract-investor/
-COPY fineract-provider/config/ fineract-provider/config/
-COPY integration-tests/build.gradle integration-tests/
 
-# Download dependencies first
-RUN gradle downloadDependencies --no-daemon --stacktrace || true
-
-# Now copy the rest of the source code
-COPY . .
+# Copy project modules
+COPY fineract-provider fineract-provider
+COPY fineract-client fineract-client
+COPY fineract-avro-schemas fineract-avro-schemas
+COPY fineract-core fineract-core
+COPY fineract-loan fineract-loan
+COPY fineract-investor fineract-investor
+COPY integration-tests integration-tests
+COPY config config
 
 # Build the application
 RUN gradle clean bootJar -x test --no-daemon --stacktrace
