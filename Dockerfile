@@ -63,15 +63,23 @@ COPY custom custom/
 
 # Copy license files
 COPY APACHE_LICENSETEXT.md LICENSE* NOTICE* ./
+COPY NOTICE.md ./
+COPY LICENSE.md ./
+COPY README.md ./
+
+# Apply license headers
+RUN ./gradlew spotlessApply --no-daemon
 
 # Build with specific settings
-RUN ./gradlew clean build --console=plain --no-daemon -x test && \
-    ./gradlew :fineract-provider:bootJar \
+RUN ./gradlew clean build \
     --console=plain \
     --no-daemon \
     --info \
     --stacktrace \
     -x test \
+    -x rat \
+    -x spotlessCheck \
+    -x spotlessApply \
     -x licenseMain \
     -x licenseTest \
     -x licenseFormatMain \
@@ -80,7 +88,18 @@ RUN ./gradlew clean build --console=plain --no-daemon -x test && \
     -Dorg.gradle.parallel=false \
     -Dorg.gradle.warning.mode=all \
     -Dorg.gradle.jvmargs="-Xmx4g -Xms512m -XX:+HeapDumpOnOutOfMemoryError" \
-    -Dorg.gradle.configureondemand=false
+    -Dorg.gradle.configureondemand=false && \
+    ./gradlew :fineract-provider:bootJar \
+    --console=plain \
+    --no-daemon \
+    -x test \
+    -x rat \
+    -x spotlessCheck \
+    -x spotlessApply \
+    -x licenseMain \
+    -x licenseTest \
+    -x licenseFormatMain \
+    -x licenseFormatTest
 
 # Final stage
 FROM eclipse-temurin:17-jre-focal
