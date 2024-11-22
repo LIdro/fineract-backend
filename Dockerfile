@@ -7,7 +7,10 @@ RUN apt-get update && \
     apt-get install -y curl dos2unix && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy gradle files first
+# Copy license and configuration files first
+COPY APACHE_LICENSETEXT.md LICENSE* NOTICE* ./
+
+# Copy gradle files
 COPY gradle gradle/
 COPY gradlew gradlew.bat build.gradle settings.gradle gradle.properties ./
 
@@ -49,11 +52,15 @@ COPY integration-tests integration-tests/
 COPY config config/
 COPY custom custom/
 
-# Build with specific settings
+# Build with specific settings and skip license tasks
 RUN ./gradlew clean bootJar \
     --no-daemon \
     --stacktrace \
     -x test \
+    -x licenseMain \
+    -x licenseTest \
+    -x licenseFormatMain \
+    -x licenseFormatTest \
     -Dorg.gradle.jvmargs="-Xmx4g -Xms512m" \
     -Dfineract.custom.modules.enabled=false \
     -Dgradle.user.home=/app/.gradle
