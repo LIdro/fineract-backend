@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk-focal AS builder
+FROM eclipse-temurin:19-jdk-focal AS builder
 
 WORKDIR /app
 
@@ -80,7 +80,7 @@ RUN ./gradlew --no-daemon --console=plain \
     find /app -name "*.jar" -type f -delete
 
 # Create final image
-FROM eclipse-temurin:17-jre-focal as runtime
+FROM eclipse-temurin:19-jre-focal as runtime
 
 WORKDIR /app
 
