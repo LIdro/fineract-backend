@@ -59,7 +59,7 @@ COPY config config/
 COPY APACHE_LICENSETEXT.md LICENSE_SOURCE LICENSE_RELEASE NOTICE_SOURCE NOTICE_RELEASE README.md ./
 
 # Apply license headers
-RUN ./gradlew spotlessApply --no-daemon -x :custom:spotlessApply
+RUN ./gradlew spotlessApply --no-daemon
 
 # Build with specific settings
 RUN ./gradlew --no-daemon --console=plain \
@@ -70,10 +70,6 @@ RUN ./gradlew --no-daemon --console=plain \
     -x checkstyleTest \
     -x pmdMain \
     -x pmdTest \
-    -x :custom:compileJava \
-    -x :custom:processResources \
-    -x :custom:classes \
-    -x :custom:jar \
     -Dfineract.custom.modules.enabled=false \
     clean build && \
     rm -rf /root/.gradle && \
