@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "dockerfileLines": [
+    "FROM postgres:15",
+    "ENV POSTGRES_USER=root",
+    "ENV POSTGRES_PASSWORD=postgres",
+    "ENV POSTGRES_DB=fineract_tenants",
+    "COPY init.sql /docker-entrypoint-initdb.d/",
+    "EXPOSE 5432"
+  ]
+}
