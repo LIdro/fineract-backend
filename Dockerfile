@@ -51,21 +51,15 @@ RUN echo "allprojects {" > /root/.gradle/init.gradle && \
 COPY buildSrc buildSrc/
 
 # Copy source files in dependency order
-COPY fineract-core fineract-core/
-COPY fineract-avro-schemas fineract-avro-schemas/
-COPY fineract-client fineract-client/
-COPY fineract-loan fineract-loan/
-COPY fineract-investor fineract-investor/
-COPY fineract-provider fineract-provider/
+COPY fineract-* fineract-*/
 COPY integration-tests integration-tests/
 COPY config config/
-COPY custom custom/
 
 # Copy license files
 COPY APACHE_LICENSETEXT.md LICENSE_SOURCE LICENSE_RELEASE NOTICE_SOURCE NOTICE_RELEASE README.md ./
 
 # Apply license headers
-RUN ./gradlew spotlessApply --no-daemon
+RUN ./gradlew spotlessApply --no-daemon -x :custom:spotlessApply
 
 # Build with specific settings
 RUN ./gradlew --no-daemon --console=plain \
@@ -76,6 +70,11 @@ RUN ./gradlew --no-daemon --console=plain \
     -x checkstyleTest \
     -x pmdMain \
     -x pmdTest \
+    -x :custom:compileJava \
+    -x :custom:processResources \
+    -x :custom:classes \
+    -x :custom:jar \
+    -Dfineract.custom.modules.enabled=false \
     clean build && \
     rm -rf /root/.gradle && \
     rm -rf /app/.gradle/caches && \
