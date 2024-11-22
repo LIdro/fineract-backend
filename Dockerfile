@@ -68,73 +68,40 @@ COPY APACHE_LICENSETEXT.md LICENSE_SOURCE LICENSE_RELEASE NOTICE_SOURCE NOTICE_R
 RUN ./gradlew spotlessApply --no-daemon
 
 # Build with specific settings
-RUN ./gradlew clean build \
-    --console=plain \
-    --no-daemon \
-    --info \
-    --stacktrace \
-    -x test \
+RUN ./gradlew --no-daemon --console=plain \
+    -x downloadLicenses \
     -x rat \
     -x spotlessCheck \
-    -x spotlessApply \
-    -x licenseMain \
-    -x licenseTest \
-    -x licenseFormatMain \
-    -x licenseFormatTest \
-    -Dfineract.custom.modules.enabled=false \
-    -Dorg.gradle.parallel=false \
-    -Dorg.gradle.warning.mode=all \
-    -Dorg.gradle.jvmargs="-Xmx4g -Xms512m -XX:+HeapDumpOnOutOfMemoryError" \
-    -Dorg.gradle.configureondemand=false && \
-    ./gradlew :fineract-provider:bootJar \
-    --console=plain \
-    --no-daemon \
-    -x test \
-    -x rat \
-    -x spotlessCheck \
-    -x spotlessApply \
-    -x licenseMain \
-    -x licenseTest \
-    -x licenseFormatMain \
-    -x licenseFormatTest
+    -x checkstyleMain \
+    -x checkstyleTest \
+    -x pmdMain \
+    -x pmdTest \
+    clean build && \
+    rm -rf /root/.gradle && \
+    rm -rf /app/.gradle/caches && \
+    rm -rf /app/.gradle/wrapper && \
+    rm -rf /app/*/build/reports && \
+    rm -rf /app/*/build/test-results && \
+    find /app -name "*.jar" -type f -delete
 
-# Final stage
-FROM eclipse-temurin:17-jre-focal
+# Create final image
+FROM eclipse-temurin:17-jre-focal as runtime
 
 WORKDIR /app
 
-# Install PostgreSQL client
+# Install PostgreSQL client and cleanup apt cache
 RUN apt-get update && \
     apt-get install -y postgresql-client && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy the built artifact
-COPY --from=builder /app/fineract-provider/build/libs/fineract-provider.jar ./app.jar
+# Copy only the necessary files from builder
+COPY --from=builder /app/fineract-provider/build/libs/fineract-provider.jar ./
+COPY --from=builder /app/LICENSE* ./
+COPY --from=builder /app/NOTICE* ./
+COPY --from=builder /app/README.md ./
 
 ENV JAVA_OPTS="-Xmx1G -Xms1G"
-ENV FINERACT_NODE_ID=1
-
-# Database configuration
-ENV FINERACT_HIKARI_DRIVER_CLASS_NAME=org.postgresql.Driver
-ENV FINERACT_HIKARI_JDBC_URL=jdbc:postgresql://srv-captain--fineract-db:5432/fineract_tenants
-ENV FINERACT_HIKARI_USERNAME=root
-ENV FINERACT_HIKARI_PASSWORD=postgres
-ENV FINERACT_HIKARI_MINIMUM_IDLE=3
-ENV FINERACT_HIKARI_MAXIMUM_POOL_SIZE=10
-ENV FINERACT_HIKARI_IDLE_TIMEOUT=60000
-ENV FINERACT_HIKARI_CONNECTION_TIMEOUT=20000
-ENV FINERACT_HIKARI_TEST_QUERY="SELECT 1"
-ENV FINERACT_HIKARI_AUTO_COMMIT=true
-ENV FINERACT_TENANT_HOST=srv-captain--fineract-db
-ENV FINERACT_TENANT_PORT=5432
-ENV FINERACT_TENANT_DB_NAME=fineract_default
-ENV FINERACT_TENANT_USERNAME=root
-ENV FINERACT_TENANT_PASSWORD=postgres
-
-# Wait for database script
-COPY config/docker/wait-for-it.sh /wait-for-it.sh
-RUN chmod +x /wait-for-it.sh
-
 EXPOSE 8443
 
-CMD ["/bin/bash", "-c", "/wait-for-it.sh srv-captain--fineract-db:5432 -- java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["java", "-jar", "fineract-provider.jar"]
