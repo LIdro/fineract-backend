@@ -11,46 +11,42 @@ RUN apt-get update && \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Set GRADLE_USER_HOME
+# Set GRADLE_USER_HOME and other environment variables
 ENV GRADLE_USER_HOME=/app/.gradle
+ENV GRADLE_OPTS="-Dorg.gradle.daemon=false"
+ENV JAVA_TOOL_OPTIONS="-Xmx4g -Xms512m"
 
-# Create gradle user home directory
-RUN mkdir -p $GRADLE_USER_HOME
+# Create gradle directories
+RUN mkdir -p $GRADLE_USER_HOME && \
+    mkdir -p /root/.gradle
 
-# Copy license and configuration files first
-COPY APACHE_LICENSETEXT.md LICENSE* NOTICE* ./
-
-# Copy gradle files
+# Copy gradle files first
 COPY gradle gradle/
-COPY gradlew gradlew.bat build.gradle settings.gradle gradle.properties ./
-
-# Fix line endings and make gradlew executable
-RUN dos2unix gradlew && \
-    chmod +x gradlew
-
-# Copy buildSrc
-COPY buildSrc buildSrc/
+COPY gradlew gradlew.bat ./
+COPY build.gradle settings.gradle gradle.properties ./
+RUN dos2unix gradlew && chmod +x gradlew
 
 # Create init.gradle with repository configurations
-RUN mkdir -p /root/.gradle && \
-    echo "allprojects {" > /root/.gradle/init.gradle && \
+RUN echo "allprojects {" > /root/.gradle/init.gradle && \
     echo "    repositories {" >> /root/.gradle/init.gradle && \
     echo "        mavenCentral()" >> /root/.gradle/init.gradle && \
     echo "        gradlePluginPortal()" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://repo1.maven.org/maven2' }" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://plugins.gradle.org/m2/' }" >> /root/.gradle/init.gradle && \
-    echo "        maven { url 'https://jcenter.bintray.com' }" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://jfrog.fineract.dev/artifactory/libs-snapshot-local' }" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://jfrog.fineract.dev/artifactory/libs-release-local' }" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://packages.confluent.io/maven/' }" >> /root/.gradle/init.gradle && \
     echo "    }" >> /root/.gradle/init.gradle && \
+    echo "    configurations.all {" >> /root/.gradle/init.gradle && \
+    echo "        resolutionStrategy {" >> /root/.gradle/init.gradle && \
+    echo "            force 'org.mapstruct:mapstruct-processor:1.5.5.Final'" >> /root/.gradle/init.gradle && \
+    echo "            force 'org.projectlombok:lombok:1.18.30'" >> /root/.gradle/init.gradle && \
+    echo "        }" >> /root/.gradle/init.gradle && \
+    echo "    }" >> /root/.gradle/init.gradle && \
     echo "}" >> /root/.gradle/init.gradle
 
-# Create required directories
-RUN mkdir -p custom/docker
-
-# Download dependencies first
-RUN ./gradlew dependencies --no-daemon --refresh-dependencies || true
+# Copy buildSrc
+COPY buildSrc buildSrc/
 
 # Copy source files
 COPY fineract-provider fineract-provider/
@@ -63,22 +59,26 @@ COPY integration-tests integration-tests/
 COPY config config/
 COPY custom custom/
 
-# Build with specific settings and skip license tasks
-RUN ./gradlew clean bootJar \
+# Copy license files
+COPY APACHE_LICENSETEXT.md LICENSE* NOTICE* ./
+
+# Build with specific settings
+RUN ./gradlew clean dependencies --console=plain --no-daemon && \
+    ./gradlew clean bootJar \
+    --console=plain \
     --no-daemon \
     --info \
-    --debug \
     --stacktrace \
     -x test \
     -x licenseMain \
     -x licenseTest \
     -x licenseFormatMain \
     -x licenseFormatTest \
-    --refresh-dependencies \
-    -Dorg.gradle.jvmargs="-Xmx4g -Xms512m" \
     -Dfineract.custom.modules.enabled=false \
-    -Dgradle.user.home=/app/.gradle \
-    -Dorg.gradle.parallel=false
+    -Dorg.gradle.parallel=false \
+    -Dorg.gradle.warning.mode=all \
+    -Dorg.gradle.jvmargs="-Xmx4g -Xms512m -XX:+HeapDumpOnOutOfMemoryError" \
+    -Dorg.gradle.configureondemand=false
 
 # Final stage
 FROM eclipse-temurin:17-jre-focal
