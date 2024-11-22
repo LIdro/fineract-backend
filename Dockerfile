@@ -42,7 +42,7 @@ RUN gradle clean bootJar -x test --no-daemon --info \
     -Dfineract.custom.modules.enabled=false
 
 # Final stage
-FROM openjdk:17-slim
+FROM openjdk:18-slim
 
 WORKDIR /app
 
