@@ -40,7 +40,9 @@ RUN echo "allprojects {" > /root/.gradle/init.gradle && \
     echo "    configurations.all {" >> /root/.gradle/init.gradle && \
     echo "        resolutionStrategy {" >> /root/.gradle/init.gradle && \
     echo "            force 'org.mapstruct:mapstruct-processor:1.5.5.Final'" >> /root/.gradle/init.gradle && \
+    echo "            force 'org.mapstruct:mapstruct:1.5.5.Final'" >> /root/.gradle/init.gradle && \
     echo "            force 'org.projectlombok:lombok:1.18.30'" >> /root/.gradle/init.gradle && \
+    echo "            force 'org.projectlombok:lombok-mapstruct-binding:0.2.0'" >> /root/.gradle/init.gradle && \
     echo "        }" >> /root/.gradle/init.gradle && \
     echo "    }" >> /root/.gradle/init.gradle && \
     echo "}" >> /root/.gradle/init.gradle
@@ -48,13 +50,13 @@ RUN echo "allprojects {" > /root/.gradle/init.gradle && \
 # Copy buildSrc
 COPY buildSrc buildSrc/
 
-# Copy source files
-COPY fineract-provider fineract-provider/
-COPY fineract-client fineract-client/
-COPY fineract-avro-schemas fineract-avro-schemas/
+# Copy source files in dependency order
 COPY fineract-core fineract-core/
+COPY fineract-avro-schemas fineract-avro-schemas/
+COPY fineract-client fineract-client/
 COPY fineract-loan fineract-loan/
 COPY fineract-investor fineract-investor/
+COPY fineract-provider fineract-provider/
 COPY integration-tests integration-tests/
 COPY config config/
 COPY custom custom/
@@ -63,8 +65,8 @@ COPY custom custom/
 COPY APACHE_LICENSETEXT.md LICENSE* NOTICE* ./
 
 # Build with specific settings
-RUN ./gradlew clean dependencies --console=plain --no-daemon && \
-    ./gradlew clean bootJar \
+RUN ./gradlew clean build --console=plain --no-daemon -x test && \
+    ./gradlew :fineract-provider:bootJar \
     --console=plain \
     --no-daemon \
     --info \
