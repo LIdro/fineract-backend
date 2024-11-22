@@ -2,19 +2,21 @@ FROM eclipse-temurin:17-jdk-focal AS builder
 
 WORKDIR /app
 
-# Install curl for downloading dependencies
+# Install required packages
 RUN apt-get update && \
-    apt-get install -y curl && \
+    apt-get install -y curl dos2unix && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy gradle files first
-COPY gradlew .
-COPY gradle gradle
-COPY build.gradle settings.gradle gradle.properties ./
-COPY buildSrc buildSrc
+COPY gradle gradle/
+COPY gradlew gradlew.bat build.gradle settings.gradle gradle.properties ./
 
-# Make gradlew executable
-RUN chmod +x gradlew
+# Fix line endings and make gradlew executable
+RUN dos2unix gradlew && \
+    chmod +x gradlew
+
+# Copy buildSrc
+COPY buildSrc buildSrc/
 
 # Create init.gradle with repository configurations
 RUN mkdir -p /root/.gradle && \
@@ -34,18 +36,18 @@ RUN mkdir -p /root/.gradle && \
 RUN mkdir -p custom/docker
 
 # Download dependencies first
-RUN ./gradlew dependencies --no-daemon --refresh-dependencies || true
+RUN ./gradlew dependencies --no-daemon --refresh-dependencies --stacktrace || true
 
 # Copy source files
-COPY fineract-provider fineract-provider
-COPY fineract-client fineract-client
-COPY fineract-avro-schemas fineract-avro-schemas
-COPY fineract-core fineract-core
-COPY fineract-loan fineract-loan
-COPY fineract-investor fineract-investor
-COPY integration-tests integration-tests
-COPY config config
-COPY custom custom
+COPY fineract-provider fineract-provider/
+COPY fineract-client fineract-client/
+COPY fineract-avro-schemas fineract-avro-schemas/
+COPY fineract-core fineract-core/
+COPY fineract-loan fineract-loan/
+COPY fineract-investor fineract-investor/
+COPY integration-tests integration-tests/
+COPY config config/
+COPY custom custom/
 
 # Build with specific settings
 RUN ./gradlew clean bootJar \
