@@ -62,10 +62,7 @@ COPY config config/
 COPY custom custom/
 
 # Copy license files
-COPY APACHE_LICENSETEXT.md LICENSE* NOTICE* ./
-COPY NOTICE.md ./
-COPY LICENSE.md ./
-COPY README.md ./
+COPY LICENSE.md README.md ./
 
 # Apply license headers
 RUN ./gradlew spotlessApply --no-daemon
