@@ -4,8 +4,18 @@ WORKDIR /app
 
 # Install required packages
 RUN apt-get update && \
-    apt-get install -y curl dos2unix postgresql-client && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y \
+    curl \
+    dos2unix \
+    postgresql-client \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set GRADLE_USER_HOME
+ENV GRADLE_USER_HOME=/app/.gradle
+
+# Create gradle user home directory
+RUN mkdir -p $GRADLE_USER_HOME
 
 # Copy license and configuration files first
 COPY APACHE_LICENSETEXT.md LICENSE* NOTICE* ./
@@ -28,6 +38,7 @@ RUN mkdir -p /root/.gradle && \
     echo "        mavenCentral()" >> /root/.gradle/init.gradle && \
     echo "        gradlePluginPortal()" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://repo1.maven.org/maven2' }" >> /root/.gradle/init.gradle && \
+    echo "        maven { url 'https://plugins.gradle.org/m2/' }" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://jcenter.bintray.com' }" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://jfrog.fineract.dev/artifactory/libs-snapshot-local' }" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://jfrog.fineract.dev/artifactory/libs-release-local' }" >> /root/.gradle/init.gradle && \
@@ -39,7 +50,7 @@ RUN mkdir -p /root/.gradle && \
 RUN mkdir -p custom/docker
 
 # Download dependencies first
-RUN ./gradlew dependencies --no-daemon --refresh-dependencies --stacktrace || true
+RUN ./gradlew dependencies --no-daemon --refresh-dependencies || true
 
 # Copy source files
 COPY fineract-provider fineract-provider/
@@ -55,15 +66,19 @@ COPY custom custom/
 # Build with specific settings and skip license tasks
 RUN ./gradlew clean bootJar \
     --no-daemon \
+    --info \
+    --debug \
     --stacktrace \
     -x test \
     -x licenseMain \
     -x licenseTest \
     -x licenseFormatMain \
     -x licenseFormatTest \
+    --refresh-dependencies \
     -Dorg.gradle.jvmargs="-Xmx4g -Xms512m" \
     -Dfineract.custom.modules.enabled=false \
-    -Dgradle.user.home=/app/.gradle
+    -Dgradle.user.home=/app/.gradle \
+    -Dorg.gradle.parallel=false
 
 # Final stage
 FROM eclipse-temurin:17-jre-focal
