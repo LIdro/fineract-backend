@@ -69,16 +69,20 @@ include ':fineract-avro-schemas'
 include ':fineract-e2e-tests-core'
 include ':fineract-e2e-tests-runner'
 include 'fineract-progressive-loan'
-// NOTE: custom Docker image with all custom modules included
-include ':custom:docker'
-// NOTE: dynamically load custom modules with pattern "custom -> company -> category -> module"
-file("${rootDir}/custom").eachDir { companyDir ->
-    if('build' != companyDir.name && 'docker' != companyDir.name) {
-        file("${rootDir}/custom/${companyDir.name}").eachDir { categoryDir ->
-            if('build' != categoryDir.name) {
-                file("${rootDir}/custom/${companyDir.name}/${categoryDir.name}").eachDir { moduleDir ->
-                    if('build' != moduleDir.name) {
-                        include ":custom:${companyDir.name}:${categoryDir.name}:${moduleDir.name}"
+
+def customDir = file("${rootDir}/custom")
+if (customDir.exists()) {
+    // NOTE: custom Docker image with all custom modules included
+    include ':custom:docker'
+    // NOTE: dynamically load custom modules with pattern "custom -> company -> category -> module"
+    customDir.eachDir { companyDir ->
+        if('build' != companyDir.name && 'docker' != companyDir.name) {
+            file("${rootDir}/custom/${companyDir.name}").eachDir { categoryDir ->
+                if('build' != categoryDir.name) {
+                    file("${rootDir}/custom/${companyDir.name}/${categoryDir.name}").eachDir { moduleDir ->
+                        if('build' != moduleDir.name) {
+                            include ":custom:${companyDir.name}:${categoryDir.name}:${moduleDir.name}"
+                        }
                     }
                 }
             }
