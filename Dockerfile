@@ -1,30 +1,42 @@
-FROM gradle:7.5.1-jdk17 AS builder
+FROM eclipse-temurin:17-jdk-focal AS builder
 
 WORKDIR /app
 
-# Set basic Gradle options
-ENV GRADLE_OPTS="-Dorg.gradle.daemon=false"
-ENV GRADLE_USER_HOME="/app/.gradle"
+# Install curl for downloading dependencies
+RUN apt-get update && \
+    apt-get install -y curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy gradle files first
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle settings.gradle gradle.properties ./
+COPY buildSrc buildSrc
+
+# Make gradlew executable
+RUN chmod +x gradlew
 
 # Create init.gradle with repository configurations
-RUN echo "allprojects {" > /root/.gradle/init.gradle && \
+RUN mkdir -p /root/.gradle && \
+    echo "allprojects {" > /root/.gradle/init.gradle && \
     echo "    repositories {" >> /root/.gradle/init.gradle && \
     echo "        mavenCentral()" >> /root/.gradle/init.gradle && \
     echo "        gradlePluginPortal()" >> /root/.gradle/init.gradle && \
+    echo "        maven { url 'https://repo1.maven.org/maven2' }" >> /root/.gradle/init.gradle && \
+    echo "        maven { url 'https://jcenter.bintray.com' }" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://jfrog.fineract.dev/artifactory/libs-snapshot-local' }" >> /root/.gradle/init.gradle && \
     echo "        maven { url 'https://jfrog.fineract.dev/artifactory/libs-release-local' }" >> /root/.gradle/init.gradle && \
+    echo "        maven { url 'https://packages.confluent.io/maven/' }" >> /root/.gradle/init.gradle && \
     echo "    }" >> /root/.gradle/init.gradle && \
     echo "}" >> /root/.gradle/init.gradle
 
 # Create required directories
 RUN mkdir -p custom/docker
 
-# Copy only essential files first
-COPY gradle gradle
-COPY build.gradle settings.gradle gradle.properties ./
-COPY buildSrc buildSrc
+# Download dependencies first
+RUN ./gradlew dependencies --no-daemon --refresh-dependencies || true
 
-# Copy all source files
+# Copy source files
 COPY fineract-provider fineract-provider
 COPY fineract-client fineract-client
 COPY fineract-avro-schemas fineract-avro-schemas
@@ -35,14 +47,17 @@ COPY integration-tests integration-tests
 COPY config config
 COPY custom custom
 
-# Build with basic settings and system property to skip custom modules
-RUN gradle clean bootJar -x test --no-daemon --info \
+# Build with specific settings
+RUN ./gradlew clean bootJar \
+    --no-daemon \
+    --stacktrace \
+    -x test \
     -Dorg.gradle.jvmargs="-Xmx4g -Xms512m" \
-    -Dorg.gradle.parallel=false \
-    -Dfineract.custom.modules.enabled=false
+    -Dfineract.custom.modules.enabled=false \
+    -Dgradle.user.home=/app/.gradle
 
 # Final stage
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jre-focal
 
 WORKDIR /app
 
