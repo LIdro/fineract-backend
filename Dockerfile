@@ -2,30 +2,41 @@ FROM eclipse-temurin:17-jdk-jammy
 
 WORKDIR /app
 
+# Install required tools
+RUN apt-get update && \
+    apt-get install -y dos2unix
+
 # Copy the Gradle wrapper files first
 COPY gradle gradle/
-COPY gradlew .
+COPY gradlew gradlew
 COPY gradle.properties .
 COPY settings.gradle .
 COPY build.gradle .
 
 # Fix line endings and make gradlew executable
-RUN apt-get update && apt-get install -y dos2unix && \
-    dos2unix gradlew && \
+RUN dos2unix gradlew && \
     chmod +x gradlew && \
+    echo "Current directory contents:" && \
     ls -la && \
+    echo "Gradle directory contents:" && \
+    ls -la gradle && \
+    echo "Current working directory:" && \
     pwd && \
-    whoami
+    echo "Current user:" && \
+    whoami && \
+    echo "File type of gradlew:" && \
+    file gradlew
 
 # Copy the rest of the source code
 COPY . .
 
-# Ensure gradlew is still executable after copying all files
-RUN chmod +x gradlew && \
-    ls -la gradlew
-
-# Build the application
-RUN ./gradlew clean bootJar
+# Try to execute gradlew with full path and debug info
+RUN pwd && \
+    ls -la && \
+    echo "Testing gradlew execution:" && \
+    /app/gradlew -v && \
+    echo "Building project:" && \
+    /app/gradlew clean bootJar --info --stacktrace
 
 # Create a new stage for running the application
 FROM eclipse-temurin:17-jre-jammy
