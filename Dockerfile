@@ -12,10 +12,17 @@ COPY build.gradle .
 # Fix line endings and make gradlew executable
 RUN apt-get update && apt-get install -y dos2unix && \
     dos2unix gradlew && \
-    chmod +x gradlew
+    chmod +x gradlew && \
+    ls -la && \
+    pwd && \
+    whoami
 
 # Copy the rest of the source code
 COPY . .
+
+# Ensure gradlew is still executable after copying all files
+RUN chmod +x gradlew && \
+    ls -la gradlew
 
 # Build the application
 RUN ./gradlew clean bootJar
