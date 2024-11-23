@@ -2,18 +2,20 @@ FROM eclipse-temurin:17-jdk-jammy
 
 WORKDIR /app
 
-# Copy the Gradle wrapper files
+# Copy the Gradle wrapper files first
+COPY gradle gradle/
 COPY gradlew .
-COPY gradle gradle
+COPY gradle.properties .
 COPY settings.gradle .
 COPY build.gradle .
-COPY gradle.properties .
 
-# Copy the source code
+# Fix line endings and make gradlew executable
+RUN apt-get update && apt-get install -y dos2unix && \
+    dos2unix gradlew && \
+    chmod +x gradlew
+
+# Copy the rest of the source code
 COPY . .
-
-# Make the Gradle wrapper executable
-RUN chmod +x ./gradlew
 
 # Build the application
 RUN ./gradlew clean bootJar
