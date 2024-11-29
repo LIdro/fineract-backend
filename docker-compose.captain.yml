@@ -1,0 +1,26 @@
+version: '3.3'
+services:
+  fineract-db:
+    image: mariadb:11.2
+    container_name: fineract-db
+    environment:
+      MARIADB_ROOT_PASSWORD: $$cap_db_password
+      MARIADB_DATABASE: fineract_tenants
+    volumes:
+      - fineract_db_data:/var/lib/mysql
+    restart: always
+    caprover: true
+
+  fineract:
+    depends_on:
+      - fineract-db
+    build: .
+    container_name: fineract
+    environment:
+      FINERACT_HIKARI_PASSWORD: $$cap_db_password
+    restart: always
+    caprover: true
+    containerHttpPort: '8080'
+
+volumes:
+  fineract_db_data:
