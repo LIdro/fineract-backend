@@ -35,6 +35,6 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - ./config/docker/env/fineract.env
-      - ./config/docker/env/fineract-common.env
-      - ./config/docker/env/fineract-mariadb.env
+      - ./config/env/fineract.env
+      - ./config/env/fineract-common.env
+      - ./config/env/fineract-mariadb.env
