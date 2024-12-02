@@ -20,11 +20,11 @@ services:
     container_name: mariadb
     image: mariadb:11.4
     volumes:
-      - ${PWD}/config/docker/mysql/conf.d/server_collation.cnf:/etc/mysql/conf.d/server_collation.cnf:ro
-      - ${PWD}/config/docker/mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:Z,ro
+      - ./config/docker/mysql/conf.d/server_collation.cnf:/etc/mysql/conf.d/server_collation.cnf:ro
+      - ./config/docker/mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:Z,ro
     restart: always
     env_file:
-      - ${PWD}/config/docker/env/mysql.env
+      - ./config/docker/env/mysql.env
     healthcheck:
       test: [ "CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized" ]
       timeout: 10s
