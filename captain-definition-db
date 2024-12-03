@@ -1,0 +1,4 @@
+{
+  "schemaVersion": 2,
+  "imageName": "mariadb:11.2"
+}
