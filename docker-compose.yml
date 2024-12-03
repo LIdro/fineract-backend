@@ -36,4 +36,5 @@ services:
         condition: service_healthy
     env_file:
       - ./config/docker/env/custom-fineract.env
+      - ./config/docker/env/jersey-config.env
       - ./config/docker/env/fineract-mariadb.env
