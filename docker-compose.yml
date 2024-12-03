@@ -30,11 +30,10 @@ services:
       file: ./config/docker/compose/fineract.yml
       service: fineract
     ports:
-      - "8443:8443"
+      - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
     env_file:
-      - ./config/env/fineract.env
-      - ./config/env/fineract-common.env
-      - ./config/env/fineract-mariadb.env
+      - ./config/docker/env/custom-fineract.env
+      - ./config/docker/env/fineract-mariadb.env
