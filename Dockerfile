@@ -8,8 +8,8 @@ COPY . .
 # Set execute permissions for gradlew
 RUN chmod +x gradlew
 
-# Build the application
-RUN --mount=type=cache,id=FvbwKN6GcA-/root/gradle,target=/root/.gradle ./gradlew clean build -x test -x check -x asciidoctor
+# Build the application with detailed logging
+RUN --mount=type=cache,id=FvbwKN6GcA-/root/gradle,target=/root/.gradle ./gradlew clean build --stacktrace --info -x test -x check -x asciidoctor
 
 # Set environment variables
 ENV FINERACT_HIKARI_USERNAME=root \
