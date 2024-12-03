@@ -21,7 +21,9 @@ version: "3.8"
 services:
   fineract:
     # user: "${FINERACT_USER}:${FINERACT_GROUP}"
-    image: fineract:latest
+    build:
+      context: ../../..
+      dockerfile: Dockerfile
     volumes:
       - ${PWD}/config/docker/logback/logback-override.xml:/app/logback-override.xml
       - ${PWD}/config/docker/aws/etc/credentials:/etc/aws/credentials:ro
@@ -29,4 +31,4 @@ services:
     healthcheck:
       test: ["CMD", 'sh', '-c', 'echo -e "Checking for the availability of Fineract server deployment"; while ! nc -z "localhost" 8443; do sleep 1; printf "-"; done; echo -e " >> Fineract server has started";' ]
       timeout: 1s
-      retries: 60
+      retries: 30
