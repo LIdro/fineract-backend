@@ -2,22 +2,14 @@ FROM eclipse-temurin:17-jdk-jammy
 
 WORKDIR /app
 
-# Copy gradle files first for better caching
-COPY gradlew build.gradle settings.gradle ./
-COPY gradle ./gradle
-COPY buildSrc ./buildSrc
+# Copy the entire source code
+COPY . .
 
 # Set execute permissions for gradlew
 RUN chmod +x gradlew
 
-# Download dependencies
-RUN ./gradlew --no-daemon dependencies
-
-# Copy the rest of the source code
-COPY . .
-
 # Build the application
-RUN ./gradlew --no-daemon clean build -x test -x check
+RUN --mount=type=cache,id=FvbwKN6GcA-/root/gradle,target=/root/.gradle ./gradlew clean build -x test -x check -x asciidoctor
 
 # Set environment variables
 ENV FINERACT_HIKARI_USERNAME=root \

@@ -809,3 +809,9 @@ task printSourceSetInformation() {
         }
     }
 }
+
+configure(project.fineractPublishProjects) {
+    configurations.all {
+        exclude group: 'com.burgstaller', module: 'okhttp-digest'
+    }
+}
